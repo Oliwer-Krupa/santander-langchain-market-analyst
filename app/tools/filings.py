@@ -14,14 +14,6 @@ SEC_HEADERS = {"User-Agent": "IncidentAnalyst/1.0 contact@example.com"}
 def _get_cik(ticker: str) -> str | None:
     """Resolve a ticker to a SEC CIK number."""
     try:
-        response = httpx.get(
-            "https://www.sec.gov/cgi-bin/browse-edgar",
-            params={"action": "getcompany", "company": ticker, "type": "", "output": "atom"},
-            headers=SEC_HEADERS,
-            timeout=10,
-            follow_redirects=True,
-        )
-        # Try the simpler tickers.json approach
         tickers_resp = httpx.get(
             "https://www.sec.gov/files/company_tickers.json",
             headers=SEC_HEADERS,

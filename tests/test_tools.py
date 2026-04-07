@@ -3,9 +3,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.tools.price import fetch_price_data
 from app.tools.news import fetch_news
+from app.tools.price import _pct_change, fetch_price_data
 from app.tools.profile import fetch_company_profile
+from app.models.evidence import PriceSnapshot
+
+
+def _snap(close: float, d: int = 1) -> PriceSnapshot:
+    return PriceSnapshot(
+        date=date(2024, 1, d), open=close, high=close, low=close, close=close, volume=1_000_000
+    )
 
 
 class TestPriceTool:
@@ -54,6 +61,29 @@ class TestPriceTool:
         assert result is None
 
 
+class TestPctChange:
+    def test_returns_none_when_not_enough_data(self):
+        snaps = [_snap(100.0, i + 1) for i in range(3)]
+        assert _pct_change(snaps, 5) is None
+
+    def test_returns_none_when_past_price_is_zero(self):
+        snaps = [_snap(0.0, 1), _snap(100.0, 2)]
+        assert _pct_change(snaps, 1) is None
+
+    def test_calculates_positive_change(self):
+        snaps = [_snap(100.0, 1), _snap(110.0, 2)]
+        assert _pct_change(snaps, 1) == 10.0
+
+    def test_calculates_negative_change(self):
+        snaps = [_snap(200.0, 1), _snap(190.0, 2)]
+        assert _pct_change(snaps, 1) == -5.0
+
+    def test_rounds_to_two_decimal_places(self):
+        snaps = [_snap(300.0, 1), _snap(301.0, 2)]
+        result = _pct_change(snaps, 1)
+        assert result == 0.33
+
+
 class TestNewsTool:
     @patch("app.tools.news.httpx.get")
     def test_returns_articles(self, mock_get):
@@ -81,6 +111,39 @@ class TestNewsTool:
         mock_get.side_effect = Exception("API error")
         result = fetch_news.invoke({"ticker": "AAPL", "finnhub_api_key": "test-key"})
         assert result == []
+
+    @patch("app.tools.news.httpx.get")
+    def test_limits_to_15_articles(self, mock_get):
+        items = [
+            {
+                "headline": f"Story {i}",
+                "source": "Reuters",
+                "url": "https://reuters.com",
+                "datetime": 1706000000 + i,
+                "summary": "",
+            }
+            for i in range(25)
+        ]
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: items)
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        result = fetch_news.invoke({"ticker": "AAPL", "finnhub_api_key": "test-key"})
+
+        assert len(result) == 15
+
+    @patch("app.tools.news.httpx.get")
+    def test_skips_articles_with_missing_datetime(self, mock_get):
+        items = [
+            {"headline": "Good", "source": "Reuters", "url": "https://r.com", "datetime": 1706000000, "summary": ""},
+            {"headline": "Bad", "source": "Reuters", "url": "https://r.com", "summary": ""},  # missing datetime
+        ]
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: items)
+        mock_get.return_value.raise_for_status = MagicMock()
+
+        result = fetch_news.invoke({"ticker": "AAPL", "finnhub_api_key": "test-key"})
+
+        assert len(result) == 1
+        assert result[0]["headline"] == "Good"
 
 
 class TestProfileTool:

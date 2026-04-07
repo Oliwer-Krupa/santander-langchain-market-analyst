@@ -1,8 +1,52 @@
+from datetime import date, datetime
+
 import pytest
 from pydantic import ValidationError
 
+from app.models.evidence import EvidenceBundle, PriceSnapshot
 from app.models.report import IncidentFactor, IncidentReport, PriceMoveSummary
 from app.models.request import AnalysisRequest
+
+
+class TestPriceSnapshot:
+    def test_accepts_valid_snapshot(self):
+        snap = PriceSnapshot(
+            date=date(2024, 1, 15),
+            open=180.0,
+            high=185.0,
+            low=179.0,
+            close=183.0,
+            volume=50_000_000,
+        )
+        assert snap.close == 183.0
+
+    def test_rejects_non_integer_volume(self):
+        with pytest.raises(ValidationError):
+            PriceSnapshot(
+                date=date(2024, 1, 15),
+                open=180.0,
+                high=185.0,
+                low=179.0,
+                close=183.0,
+                volume="not_an_int",
+            )
+
+
+class TestEvidenceBundle:
+    def test_defaults_to_empty_lists(self):
+        bundle = EvidenceBundle(ticker="AAPL")
+        assert bundle.news == []
+        assert bundle.filings == []
+        assert bundle.errors == []
+
+    def test_price_data_defaults_to_none(self):
+        bundle = EvidenceBundle(ticker="AAPL")
+        assert bundle.price_data is None
+        assert bundle.profile is None
+
+    def test_ticker_is_stored(self):
+        bundle = EvidenceBundle(ticker="MSFT")
+        assert bundle.ticker == "MSFT"
 
 
 class TestAnalysisRequest:
