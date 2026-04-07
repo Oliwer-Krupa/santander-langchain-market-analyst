@@ -7,7 +7,6 @@ from app.models.evidence import FilingRef
 
 logger = logging.getLogger(__name__)
 
-SEC_BASE = "https://efts.sec.gov/LATEST/search-index"
 SEC_SUBMISSIONS = "https://data.sec.gov/submissions"
 SEC_HEADERS = {"User-Agent": "IncidentAnalyst/1.0 contact@example.com"}
 

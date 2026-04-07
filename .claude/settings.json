@@ -4,7 +4,9 @@
       "WebSearch",
       "WebFetch(domain:docs.pydantic.dev)",
       "WebFetch(domain:pypi.org)",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('ui/streamlit_app.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK - no syntax errors'\\)\")",
+      "Bash(docker compose:*)"
     ]
   }
 }

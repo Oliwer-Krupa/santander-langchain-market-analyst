@@ -8,7 +8,6 @@ Design decision:
 
 import asyncio
 import logging
-from datetime import datetime
 
 from app.chain.analysis import build_analysis_chain
 from app.chain.llm import get_llm
@@ -28,12 +27,6 @@ from app.tools.price import fetch_price_data
 from app.tools.profile import fetch_company_profile
 
 logger = logging.getLogger(__name__)
-
-
-async def _run_in_executor(func, *args):
-    """Run a sync tool function in a thread executor."""
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, lambda: func.invoke({"ticker": args[0], **{k: v for k, v in zip(func.args.keys(), args) if k != "ticker"}} if len(args) > 1 else {"ticker": args[0]}))
 
 
 async def gather_evidence(request: AnalysisRequest, settings: Settings) -> EvidenceBundle:
